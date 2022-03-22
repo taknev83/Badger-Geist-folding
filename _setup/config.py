@@ -1,8 +1,8 @@
 ## Token deposited in the vault
-WANT = "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599"
+WANT = "0x82f0B8B456c1A451378467398982d4834b6829c1"     # MIM token
 
 ## Account that has a lot of want (we will "borrow it" for testing)
-WHALE_ADDRESS = "0xbf72da2bd84c5170618fbe5914b0eca9638d5eb5"
+WHALE_ADDRESS = "0x6f86e65b255c9111109d2d2325ca2dfc82456efc"   #10 holder in FTMScan    
 
 ## Address for Badger Registry, used to fill in default addresses
 ## See: https://github.com/Badger-Finance/badger-registry

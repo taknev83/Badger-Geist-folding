@@ -13,6 +13,7 @@ class Network(IntEnum):
     Polygon = 137
     Hardhat = 31337
     Arbitrum = 42161
+    Fantom = 250
 
 
 MULTICALL_ADDRESSES = {
@@ -26,4 +27,5 @@ MULTICALL_ADDRESSES = {
     Network.Polygon: "0x11ce4B23bD875D7F5C6a31084f55fDe1e9A87507",
     Network.Arbitrum: "0x7A7443F8c577d537f1d8cD4a629d40a3148Dd7ee",
     Network.Hardhat: "0x7A7443F8c577d537f1d8cD4a629d40a3148Dd7ee",
+    Network.Fantom: "0xb828C456600857abd4ed6C32FAcc607bD0464F4F",
 }

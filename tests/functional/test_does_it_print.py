@@ -2,6 +2,10 @@ import brownie
 from brownie import *
 from helpers.constants import MaxUint256
 from helpers.SnapshotManager import SnapshotManager
+from helpers.utils import (
+    approx,
+)
+
 
 MAX_BPS = 10_000
 MIN_ACCEPTABLE_APR = 0.
@@ -70,7 +74,7 @@ def test_is_acceptable_apr(vault, strategy, want, keeper, deployer):
     strategy.harvest({"from": keeper})
 
     # Ensure strategy reports correct harvestedAmount
-    assert vault.assetsAtLastHarvest() == depositAmount
+    assert approx(vault.assetsAtLastHarvest(), depositAmount, 1)
     vault_balance1 = vault.balance()
 
     # Wait for rewards to accumulate
@@ -84,7 +88,7 @@ def test_is_acceptable_apr(vault, strategy, want, keeper, deployer):
     # Harvest should be non-zero if strat is printing
     assert vault.lastHarvestAmount() > 0
     # Ensure strategy reports correct harvestedAmount
-    assert vault.assetsAtLastHarvest() == vault_balance1
+    assert approx(vault.assetsAtLastHarvest(), vault_balance1, 1)
 
     #  Over a year
     apr = 52 * vault.lastHarvestAmount() / vault.assetsAtLastHarvest()

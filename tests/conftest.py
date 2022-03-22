@@ -52,22 +52,22 @@ def want(deployer):
 
 @pytest.fixture
 def strategist():
-    return accounts[1]
+    return accounts[0]
 
 
 @pytest.fixture
 def keeper():
-    return accounts[2]
+    return accounts[0]
 
 
 @pytest.fixture
 def guardian():
-    return accounts[3]
+    return accounts[0]
 
 
 @pytest.fixture
 def governance():
-    return accounts[4]
+    return accounts[0]
 
 @pytest.fixture
 def treasury():
