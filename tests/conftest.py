@@ -145,6 +145,14 @@ def deployed(want, deployer, strategist, keeper, guardian, governance, proxyAdmi
 def vault(deployed):
     return deployed.vault
 
+@pytest.fixture
+def gToken():
+    return interface.IERC20("0xc664Fc7b8487a3E10824Cda768c1d239F2403bBe")
+
+@pytest.fixture
+def gDebtToken():
+    return interface.IERC20("0xe6f5b2d4DE014d8fa4c45b744921fFDf13f15D4a")
+
 
 @pytest.fixture
 def strategy(deployed):

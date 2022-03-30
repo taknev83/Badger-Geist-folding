@@ -1,3 +1,15 @@
+# Badger - Geist Looping Strategy
+
+This strategy magnifies the deposit amount by borrowing against the deposit made & re-depositing the same. This works in Geist Finance, as Geist allows borrowing & re-depositing and to earn the Geist token as reward. This strategy deposits & loops MIM token to earn more reward. 
+
+
+## Strategy Diagram
+
+## Things to refine
+ - APR values returning from strategy is very low, theoretically it should be more
+ - to write more customised `withdrawSome` function in the strategy
+ - In the integration tests, `withdraw` related test asserts are failing, need to refine it 
+
 
 # Badger Strategy V1.5 Brownie Mix
 

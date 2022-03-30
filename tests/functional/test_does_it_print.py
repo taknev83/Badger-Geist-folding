@@ -11,7 +11,7 @@ MAX_BPS = 10_000
 MIN_ACCEPTABLE_APR = 0.
 
 
-def test_is_profitable(vault, strategy, want, randomUser, deployer):
+def test_is_profitable(vault, strategy, want, randomUser, deployer, governance, gToken):
     initial_balance = want.balanceOf(deployer)
 
     settKeeper = accounts.at(vault.keeper(), force=True)
@@ -37,7 +37,7 @@ def test_is_profitable(vault, strategy, want, randomUser, deployer):
     chain.sleep(15)
     chain.mine(1)
 
-    strategy.harvest({"from": settKeeper})
+    strategy.harvest({"from": governance})
 
     snap.settWithdrawAll({"from": deployer})
 
@@ -91,7 +91,16 @@ def test_is_acceptable_apr(vault, strategy, want, keeper, deployer):
     assert approx(vault.assetsAtLastHarvest(), vault_balance1, 1)
 
     #  Over a year
-    apr = 52 * vault.lastHarvestAmount() / vault.assetsAtLastHarvest()
+    VaultBalanceAtLastHarvest = vault.assetsAtLastHarvest()
+    harvestAmount = vault.lastHarvestAmount()
 
+    apr = 52 * vault.lastHarvestAmount() / vault.assetsAtLastHarvest()
+    aprFromDeposot = 52 * harvestAmount / depositAmount
+
+
+    print(f'Deposit Amount : {depositAmount}')
+    print(f'Vault Balance : {VaultBalanceAtLastHarvest}')
+    print(f'Harvest Amount : {harvestAmount}')
     print(f"APR: {apr}")
+    print(f'APR_From_deposit : {aprFromDeposot}')
     assert apr > MIN_ACCEPTABLE_APR

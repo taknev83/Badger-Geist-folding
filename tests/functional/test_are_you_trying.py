@@ -2,7 +2,7 @@ from brownie import *
 from helpers.constants import MaxUint256
 
 
-def test_are_you_trying(deployer, vault, strategy, want, governance):
+def test_are_you_trying(deployer, vault, strategy, want, governance, gToken):
     """
     Verifies that you set up the Strategy properly
     """
@@ -35,9 +35,10 @@ def test_are_you_trying(deployer, vault, strategy, want, governance):
 
     # Did the strategy do something with the asset?
     assert want.balanceOf(strategy) < available
+    # print(f'gToken balance in Strat : {gToken.balanceOf(strategy)}')
 
     # Use this if it should invest all
-    assert want.balanceOf(strategy) == 0
+    # assert want.balanceOf(strategy) == 0
 
     # Change to this if the strat is supposed to hodl and do nothing
     # assert strategy.balanceOf(want) = depositAmount

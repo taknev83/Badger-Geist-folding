@@ -3,6 +3,7 @@ from brownie import *
 from helpers.constants import MaxUint256
 from helpers.SnapshotManager import SnapshotManager
 from helpers.time import days
+# from tests.conftest import gDebtToken
 
 """
   TODO: Put your tests here to prove the strat is good!
@@ -12,4 +13,40 @@ from helpers.time import days
 
 
 def test_my_custom_test(deployed):
-    assert True
+	assert True
+
+def test_levered_deposit(deployer, vault, strategy, want, governance, gToken, gDebtToken):
+    startingBalance = want.balanceOf(deployer)
+
+    depositAmount = startingBalance // 2
+    assert startingBalance >= depositAmount
+    assert startingBalance >= 0
+    print(f'Starting Balance : {startingBalance}')
+    print(f'Deposit Amount : {depositAmount}')
+    # End Setup
+
+    # Deposit
+    assert want.balanceOf(vault) == 0
+
+    want.approve(vault, MaxUint256, {"from": deployer})
+    vault.deposit(depositAmount, {"from": deployer})
+
+    available = vault.available()
+    assert available > 0
+
+    vault.earn({"from": governance})
+    print(f'gToken Amount : {gToken.balanceOf(strategy)}')
+    print(f'gDebtToken Amount : {gDebtToken.balanceOf(strategy)}')
+    print(f'Net Deposit Amount : {gToken.balanceOf(strategy) - gDebtToken.balanceOf(strategy)}')
+
+    week = 60 * 60 * 24 * 7
+    chain.sleep(week)
+    chain.mine(1)
+
+    harvest = strategy.harvest({"from": governance})
+    event = harvest.events["Debug"]
+    print(f'Harvest : {event["value"]}')
+
+	# APR = (52 * (event["value"] / depositAmount)) * 100
+
+
