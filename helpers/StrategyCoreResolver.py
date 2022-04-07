@@ -253,7 +253,7 @@ class StrategyCoreResolver:
             print(f'Strat balance before: {before.get("strategy.balanceOf")}')
             print('*****************************************************************')
             # Rounding off - Need to check how to approx in <= scenarios, commenting the below assert 
-            # assert want_required_from_strat <= before.get("strategy.balanceOf")
+            assert want_required_from_strat <= before.get("strategy.balanceOf")
 
             # # NOTE: Assumes strategy don't lose > 1%
             # Strategies can lose money upto a certain threshold. On calling withdraw on a strategy

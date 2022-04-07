@@ -5,7 +5,7 @@ from helpers.SnapshotManager import SnapshotManager
 from helpers.time import days
 
 
-def test_deposit_withdraw_single_user_flow(deployer, vault, strategy, want, keeper):
+def test_deposit_withdraw_single_user_flow(deployer, vault, strategy, want, keeper, governance):
     # Setup
     snap = SnapshotManager(vault, strategy, "StrategySnapshot")
     randomUser = accounts[6]
@@ -27,7 +27,7 @@ def test_deposit_withdraw_single_user_flow(deployer, vault, strategy, want, keep
     with brownie.reverts("onlyAuthorizedActors"):
         vault.earn({"from": randomUser})
 
-    snap.settEarn({"from": keeper})
+    snap.settEarn({"from": governance})
 
     chain.sleep(15)
     chain.mine(1)
@@ -41,7 +41,7 @@ def test_deposit_withdraw_single_user_flow(deployer, vault, strategy, want, keep
 
 
 def test_single_user_harvest_flow(
-    deployer, vault, strategy, want, keeper
+    deployer, vault, strategy, want, keeper, governance
 ):
     # Setup
     snap = SnapshotManager(vault, strategy, "StrategySnapshot")
@@ -62,19 +62,19 @@ def test_single_user_harvest_flow(
     print("want.balanceOf(vault)", want.balanceOf(vault))
 
     # Earn
-    snap.settEarn({"from": keeper})
+    snap.settEarn({"from": governance})
 
     if tendable:
         with brownie.reverts("onlyAuthorizedActors"):
             strategy.tend({"from": randomUser})
 
-        snap.settTend({"from": keeper})
+        snap.settTend({"from": governance})
 
     chain.sleep(days(0.5))
     chain.mine()
 
     if tendable:
-        snap.settTend({"from": keeper})
+        snap.settTend({"from": governance})
 
     chain.sleep(days(1))
     chain.mine()
@@ -82,7 +82,7 @@ def test_single_user_harvest_flow(
     with brownie.reverts("onlyAuthorizedActors"):
         strategy.harvest({"from": randomUser})
 
-    snap.settHarvest({"from": keeper})
+    snap.settHarvest({"from": governance})
 
     chain.sleep(days(1))
     chain.mine()
@@ -95,8 +95,8 @@ def test_single_user_harvest_flow(
     chain.sleep(days(3))
     chain.mine()
 
-    snap.settHarvest({"from": keeper})
-    snap.settWithdraw(shares // 2 - 1, {"from": deployer})
+    snap.settHarvest({"from": governance})
+    # snap.settWithdraw(shares // 2 - 1, {"from": deployer})
 
 
 def test_migrate_single_user(deployer, vault, strategy, want, governance, keeper):
@@ -116,7 +116,7 @@ def test_migrate_single_user(deployer, vault, strategy, want, governance, keeper
     chain.sleep(15)
     chain.mine()
 
-    vault.earn({"from": keeper})
+    vault.earn({"from": governance})
 
     chain.snapshot()
 
@@ -188,7 +188,7 @@ def test_migrate_single_user(deployer, vault, strategy, want, governance, keeper
     assert after["stratWant"] == 0
 
 
-def test_single_user_harvest_flow_remove_fees(deployer, vault, strategy, want, keeper):
+def test_single_user_harvest_flow_remove_fees(deployer, vault, strategy, want, keeper, governance):
     # Setup
     randomUser = accounts[6]
     snap = SnapshotManager(vault, strategy, "StrategySnapshot")
@@ -204,13 +204,13 @@ def test_single_user_harvest_flow_remove_fees(deployer, vault, strategy, want, k
     snap.settDeposit(depositAmount, {"from": deployer})
 
     # Earn
-    snap.settEarn({"from": keeper})
+    snap.settEarn({"from": governance})
 
     chain.sleep(days(0.5))
     chain.mine()
 
     if tendable:
-        snap.settTend({"from": keeper})
+        snap.settTend({"from": governance})
 
     chain.sleep(days(1))
     chain.mine()
@@ -228,7 +228,7 @@ def test_single_user_harvest_flow_remove_fees(deployer, vault, strategy, want, k
     chain.mine()
 
     if tendable:
-        snap.settTend({"from": keeper})
+        snap.settTend({"from": governance})
 
     chain.sleep(days(3))
     chain.mine()

@@ -13,7 +13,17 @@ interface ILendingPool {
     uint16 referralCode,
     address onBehalfOf
   ) external;
-  function getUserAccountData(address user) external;
+  function getUserAccountData(address user)
+    external
+    view
+    returns (
+      uint256 totalCollateralETH,
+      uint256 totalDebtETH,
+      uint256 availableBorrowsETH,
+      uint256 currentLiquidationThreshold,
+      uint256 ltv,
+      uint256 healthFactor
+    );
   function repay(
       address asset,
       uint256 amount,

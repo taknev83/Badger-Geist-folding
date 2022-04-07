@@ -21,6 +21,7 @@ contract MyStrategy is BaseStrategy {
     using SafeMathUpgradeable for uint256;
 
     event Debug(string name, uint256 value);
+    event withdrawSome(string name, uint256 amount);
     // address public want; // Inherited from BaseStrategy
     // address public lpComponent; // Token that represents ownership in a pool, not always used
     // address public reward; // Token we farm
@@ -80,7 +81,7 @@ contract MyStrategy is BaseStrategy {
     /// @dev Deposit `_amount` of want, investing it to earn yield
     /// @notice 
     function _deposit(uint256 _amount) internal override {
-        uint256 depositAmount = _amount * 100 / 100;
+        uint256 depositAmount = _amount.mul(98).div(100);
         LENDING_POOL.deposit(want, depositAmount, address(this), 0);
         emit Debug("First Deposit", depositAmount);
         require(IERC20Upgradeable(gToken).balanceOf(address(this)) > 0, "gToken 0 balance");
@@ -90,16 +91,14 @@ contract MyStrategy is BaseStrategy {
     }
 
     /// @dev Borrow & deposit function
+    /// @param depositAmount to leverage the deposit amount
     function _borrowAndSupply(uint256 depositAmount) internal returns (uint256) {
-        uint256 toBorrow = 70;  // 70% of the deposit amount
+        uint256 toBorrow = 60;  // 60% of the deposit amount
         uint256 total = 100;
-        uint256 borrowAmount = depositAmount * toBorrow / total;
-        emit Debug("Borrow Amount", borrowAmount);
+        uint256 borrowAmount = depositAmount.mul(toBorrow).div(total);
         LENDING_POOL.borrow(want, borrowAmount, 2, 0, address(this));  
-        emit Debug("Borrow {i}", borrowAmount);         
         uint256 wantBalance = IERC20Upgradeable(want).balanceOf(address(this));
         LENDING_POOL.deposit(want, wantBalance, address(this), 0);  
-        emit Debug("Deposit {i + 1}", wantBalance);
         return wantBalance;     
     }
     /// @dev Withdraw all funds, this is used for migrations, most of the time for emergency reasons
@@ -109,6 +108,50 @@ contract MyStrategy is BaseStrategy {
             // AAVE reverts if trying to withdraw 0
             return;
         }
+        _withdrawAndRepay();
+        uint256 withdrawableBalance = IERC20Upgradeable(gToken).balanceOf(address(this)); // Cache to save gas on worst case
+        // Withdraw leftovers!!
+        LENDING_POOL.withdraw(want, withdrawableBalance, address(this));
+    }
+
+    /// @dev utility function to get safe withdraw balance
+    function _getSafeWithdrawBalance() internal returns (uint256) {
+        uint256 borrowBalance = IERC20Upgradeable(variableDebtgMIM).balanceOf(address(this));
+        uint256 depositBalance = IERC20Upgradeable(gToken).balanceOf(address(this));
+        uint256 withdrawBalance = depositBalance - borrowBalance;
+        uint256 safeWithdrawBalance = withdrawBalance.mul(50).div(100);   // withdrawing 50% 
+        return safeWithdrawBalance;
+    }
+
+    /// @dev utility function to get essential metrics
+    function getUserDetails() public view returns (uint256, uint256, uint256, uint256, uint256, uint256){
+        uint256 totalCollateralETH;
+        uint256 totalDebtETH;
+        uint256 availableBorrowsETH;
+        uint256 currentLiquidationThreshold;
+        uint256 ltv;
+        uint256 healthFactor;
+        (totalCollateralETH, totalDebtETH, availableBorrowsETH, currentLiquidationThreshold, ltv, healthFactor) =
+        LENDING_POOL.getUserAccountData(address(this));
+        return (totalCollateralETH,
+        totalDebtETH,
+        availableBorrowsETH,
+        currentLiquidationThreshold,
+        ltv,
+        healthFactor);
+    }
+
+    /// @dev utility function to get healthfactor
+    function _getHealthFactor() internal returns (uint256) {
+        uint256 totalCollateral = IERC20Upgradeable(gToken).balanceOf(address(this));
+        uint256 totalDebt = IERC20Upgradeable(variableDebtgMIM).balanceOf(address(this));
+        uint256 ltv = 8000;
+        uint256 HF = totalCollateral.mul(ltv).div(totalDebt);
+        return HF;
+    }
+
+    ///@dev utility function to deleverage all (withdraw & repay debt)
+    function _withdrawAndRepay() internal {
         uint256 borrowToken = IERC20Upgradeable(variableDebtgMIM).balanceOf(address(this));
         do {
             uint256 safeWithdrawBalance = _getSafeWithdrawBalance();
@@ -116,20 +159,7 @@ contract MyStrategy is BaseStrategy {
             uint256 withdrawnBalance = IERC20Upgradeable(want).balanceOf(address(this));
             LENDING_POOL.repay(want, withdrawnBalance, 2, address(this));
             borrowToken = IERC20Upgradeable(variableDebtgMIM).balanceOf(address(this));
-        } while (borrowToken > 0);
-
-        uint256 withdrawableBalance = IERC20Upgradeable(gToken).balanceOf(address(this)); // Cache to save gas on worst case
-        // Withdraw leftovers!!
-        LENDING_POOL.withdraw(want, withdrawableBalance, address(this));
-    }
-
-    /// @dev uitility function to get safe withdraw balance
-    function _getSafeWithdrawBalance() internal returns (uint256) {
-        uint256 borrowBalance = IERC20Upgradeable(variableDebtgMIM).balanceOf(address(this));
-        uint256 depositBalance = IERC20Upgradeable(gToken).balanceOf(address(this));
-        uint256 withdrawBalance = depositBalance - borrowBalance;
-        uint256 safeWithdrawBalance = withdrawBalance * 60 / 100;   // withdrawing 60% 
-        return safeWithdrawBalance;
+        } while (borrowToken > 0);        
     }
 
     /// @dev Withdraw `_amount` of want, so that it can be sent to the vault / depositor
@@ -139,19 +169,24 @@ contract MyStrategy is BaseStrategy {
         // If there's a loss, make sure to have the withdrawer pay the loss to avoid exploits
         // Socializing loss is always a bad idea
 
-        uint256 balBefore = balanceOfWant();
-        _withdrawAll();
-        uint256 postwithdraw = IERC20Upgradeable(want).balanceOf(address(this));
-        uint256 toDeposit = postwithdraw - _amount;
-        emit Debug("Post Withdraw Amount", postwithdraw);
-        emit Debug("Withdraw requested amount", _amount);
-        emit Debug("Deposit Amount after withdrawAll", toDeposit);
-        if (toDeposit > 0) {
-            _deposit(toDeposit);        
+        if (_amount > balanceOfPool()) {
+            _amount = balanceOfPool();
         }
+        uint256 balBefore = balanceOfWant();
+        _withdrawAndRepay();
+        require(IERC20Upgradeable(variableDebtgMIM).balanceOf(address(this)) == 0, "Not 0 balance");
+        LENDING_POOL.withdraw(want, _amount, address(this));
+        uint256 leftOutGToken = IERC20Upgradeable(gToken).balanceOf(address(this)); // Cache to save gas on worst case
+        _borrowAndSupply(leftOutGToken);
         uint256 balAfter = balanceOfWant();
-        // Handle case of slippage
         return balAfter.sub(balBefore);
+    }
+
+    /// @dev utility function to rebalance the leverage
+    function rebalance() public {
+        _withdrawAll();
+        uint256 wantBalance = IERC20Upgradeable(want).balanceOf(address(this)); // Cache to save gas on worst case
+        _deposit(wantBalance);
     }
 
     /// @dev Does this function require `tend` to be called?
@@ -174,7 +209,7 @@ contract MyStrategy is BaseStrategy {
 
         // Sell for more want
         harvested = new TokenAmount[](1);
-        harvested[0] = TokenAmount(REWARD, 0);
+        // harvested[0] = TokenAmount(REWARD, 0);
         
         if (allRewards > 0) {
             harvested[0] = TokenAmount(REWARD, allRewards);
@@ -193,6 +228,7 @@ contract MyStrategy is BaseStrategy {
 
         // Report profit for the want increase (NOTE: We are not getting perf fee on AAVE APY with this code)
         _reportToVault(wantHarvested);
+        rebalance();
         emit Debug('WantHarvested', wantHarvested);
 
     }
